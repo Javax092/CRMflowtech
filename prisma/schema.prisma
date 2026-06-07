@@ -1,0 +1,197 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum LeadStatus {
+  NEW
+  DEMO_CREATED
+  CONTACTED
+  RESPONDED
+  INTERESTED
+  MEETING_SCHEDULED
+  PROPOSAL_SENT
+  WON
+  LOST
+}
+
+enum PipelineStage {
+  LEAD_ENCONTRADO
+  DEMO_CRIADA
+  MENSAGEM_ENVIADA
+  RESPONDEU
+  REUNIAO_MARCADA
+  PROPOSTA_ENVIADA
+  NEGOCIACAO
+  FECHADO
+  PERDIDO
+}
+
+enum Segment {
+  LAW
+  NUTRITION
+  VETERINARY
+  PETSHOP
+  CLINIC
+  RESTAURANT
+  OTHER
+}
+
+enum OfferedService {
+  WEBSITE
+  SYSTEM
+  AUTOMATION
+  SEO
+  MONTHLY_MAINTENANCE
+}
+
+enum LeadSource {
+  INSTAGRAM
+  GOOGLE_MAPS
+  REFERRAL
+  WHATSAPP
+  MANUAL_LIST
+}
+
+enum ContactEventType {
+  FIRST_CONTACT
+  FOLLOW_UP
+  MEETING_SCHEDULED
+  PROPOSAL_SENT
+  CLIENT_REPLIED
+  CLIENT_WON
+  CLIENT_DECLINED
+  MESSAGE_GENERATED
+  PIPELINE_CHANGED
+  DEMO_LINKED
+}
+
+enum ScriptType {
+  FIRST_APPROACH
+  FOLLOW_UP_1
+  FOLLOW_UP_2
+  WEBSITE_PROPOSAL
+  SYSTEM_PROPOSAL
+  MONTHLY_PROPOSAL
+}
+
+model User {
+  id           String   @id @default(cuid())
+  name         String
+  email        String   @unique
+  passwordHash String
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+model Lead {
+  id                    String           @id @default(cuid())
+  responsibleName       String?
+  companyName           String?
+  segment               Segment
+  instagram             String?
+  instagramNormalized   String?          @unique
+  whatsapp              String?
+  whatsappNormalized    String?          @unique
+  email                 String?
+  emailNormalized       String?          @unique
+  city                  String?
+  websiteUrl            String?
+  demoUrl               String?
+  offeredService        OfferedService
+  proposedValue         Decimal?         @db.Decimal(12, 2)
+  status                LeadStatus       @default(NEW)
+  pipelineStage         PipelineStage    @default(LEAD_ENCONTRADO)
+  source                LeadSource       @default(MANUAL_LIST)
+  notes                 String?
+  firstContactAt        DateTime?
+  lastContactAt         DateTime?
+  nextFollowUpAt        DateTime?
+  followUpType          String?
+  nextStepNote          String?
+  companyNameNormalized String?
+  forceDuplicate        Boolean          @default(false)
+  demoSiteId            String?
+  demoSite              DemoSite?        @relation(fields: [demoSiteId], references: [id])
+  createdAt             DateTime         @default(now())
+  updatedAt             DateTime         @updatedAt
+  histories             ContactHistory[]
+  followUps             FollowUp[]
+  deals                 Deal[]
+
+  @@index([status])
+  @@index([pipelineStage])
+  @@index([demoSiteId])
+  @@index([nextFollowUpAt])
+  @@index([companyNameNormalized])
+}
+
+model DemoSite {
+  id          String   @id @default(cuid())
+  name        String
+  segment     String
+  url         String
+  reference   String?
+  description String?
+  stack       String?
+  status      String   @default("ACTIVE")
+  notes       String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  leads       Lead[]
+
+  @@index([segment])
+  @@index([status])
+}
+
+model ContactHistory {
+  id        String           @id @default(cuid())
+  leadId    String
+  lead      Lead             @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  type      ContactEventType
+  title     String
+  message   String?
+  createdAt DateTime         @default(now())
+}
+
+model ScriptTemplate {
+  id        String     @id @default(cuid())
+  name      String
+  type      ScriptType
+  content   String
+  active    Boolean    @default(true)
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+}
+
+model FollowUp {
+  id          String    @id @default(cuid())
+  leadId      String
+  lead        Lead      @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  dueAt       DateTime
+  type        String
+  note        String?
+  completedAt DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@index([dueAt])
+  @@index([completedAt])
+}
+
+model Deal {
+  id        String   @id @default(cuid())
+  leadId    String
+  lead      Lead     @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  title     String
+  value     Decimal  @db.Decimal(12, 2)
+  won       Boolean  @default(false)
+  closedAt  DateTime?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}

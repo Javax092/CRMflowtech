@@ -72,6 +72,19 @@ npm run dev
 
 Acesse `http://localhost:3000`.
 
+## Instalar como aplicativo PWA
+
+O FlowCRM pode ser instalado no computador como PWA e abrir direto na central diária em `/hoje`.
+
+No Chrome:
+
+- Abrir `http://localhost:3000/hoje`
+- Clicar no ícone de instalação na barra de endereço
+- Confirmar "Instalar FlowCRM"
+- Fixar o app na barra de tarefas
+
+Se o botão "Instalar FlowCRM no computador" aparecer dentro do CRM, ele também pode ser usado para abrir o prompt de instalação.
+
 ## Login
 
 Use as credenciais definidas no `.env`. Em desenvolvimento, se não configurar variáveis:
