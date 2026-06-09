@@ -114,6 +114,9 @@ model Lead {
   nextFollowUpAt        DateTime?
   followUpType          String?
   nextStepNote          String?
+  recommendedProduct    String?
+  audit                 String?
+  approachScript        String?
   companyNameNormalized String?
   forceDuplicate        Boolean          @default(false)
   demoSiteId            String?
