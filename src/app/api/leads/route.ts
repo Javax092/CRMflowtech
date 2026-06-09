@@ -44,6 +44,53 @@ async function findDuplicateLead(data: {
   return prisma.lead.findFirst({ where });
 }
 
+function parseLimit(value: string | null) {
+  if (!value) return 10;
+
+  const parsed = Number.parseInt(value, 10);
+  if (!Number.isFinite(parsed) || parsed <= 0) return 10;
+
+  return Math.min(parsed, 100);
+}
+
+export async function GET(request: Request) {
+  const authError = validateN8nApiKey(request);
+  if (authError) return authError;
+
+  const { searchParams } = new URL(request.url);
+  const where: Prisma.LeadWhereInput = {};
+
+  const statusParam = searchParams.get("status");
+  if (statusParam) {
+    try {
+      where.status = leadStatusFromApi(statusParam);
+    } catch (error) {
+      return NextResponse.json({ success: false, error: error instanceof Error ? error.message : "Status inválido." }, { status: 400 });
+    }
+  }
+
+  if (searchParams.get("withoutAudit") === "true") {
+    where.OR = [{ audit: null }, { audit: "" }];
+  }
+
+  try {
+    const leads = await prisma.lead.findMany({
+      where,
+      take: parseLimit(searchParams.get("limit")),
+      orderBy: { createdAt: "asc" }
+    });
+
+    return NextResponse.json({ success: true, leads: leads.map(formatLeadForApi) });
+  } catch (error) {
+    console.error("ERRO API N8N AO BUSCAR LEADS:", error);
+
+    return NextResponse.json(
+      { success: false, error: "Não foi possível buscar os leads." },
+      { status: 500 }
+    );
+  }
+}
+
 export async function POST(request: Request) {
   const authError = validateN8nApiKey(request);
   if (authError) return authError;
