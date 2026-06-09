@@ -1,10 +1,12 @@
 import { notFound } from "next/navigation";
 import { deleteLeadAction } from "@/app/actions";
 import { HistoryForm } from "@/components/history-form";
+import { LeadApproachPanel } from "@/components/lead-approach-panel";
 import { LeadDemoLinkForm } from "@/components/lead-demo-link-form";
 import { LeadQuickActions } from "@/components/lead-actions";
 import { ScriptMessage } from "@/components/script-message";
 import { Badge, Button, Card, PageHeader } from "@/components/ui";
+import { generateLeadApproach, recommendedProductForLead } from "@/lib/approach";
 import { currency, date } from "@/lib/format";
 import { eventLabels, pipelineStageLabels, segmentLabels, serviceLabels, sourceLabels, statusColors, statusLabels } from "@/lib/labels";
 import { prisma } from "@/lib/prisma";
@@ -25,6 +27,9 @@ export default async function LeadDetailPage({ params }: { params: Promise<{ id:
     prisma.demoSite.findMany({ where: { status: "ACTIVE" }, orderBy: [{ segment: "asc" }, { name: "asc" }] })
   ]);
   if (!lead) notFound();
+
+  const recommendedProduct = recommendedProductForLead(lead);
+  const approachScript = lead.approachScript || generateLeadApproach({ ...lead, recommendedProduct });
 
   const fields = [
     ["Responsável", lead.responsibleName],
@@ -77,6 +82,19 @@ export default async function LeadDetailPage({ params }: { params: Promise<{ id:
               ))}
             </div>
             {lead.notes ? <p className="mt-5 rounded-md bg-slate-50 p-3 text-sm text-slate-700">{lead.notes}</p> : null}
+          </Card>
+          <Card className="p-5">
+            <div className="mb-4">
+              <h2 className="font-semibold text-slate-950">Abordagem pronta</h2>
+              <p className="mt-1 text-sm text-slate-500">Mensagem comercial gerada a partir do lead, auditoria, segmento e produto recomendado.</p>
+            </div>
+            <LeadApproachPanel
+              leadId={lead.id}
+              initialRecommendedProduct={recommendedProduct}
+              initialAudit={lead.audit ?? ""}
+              initialDemoUrl={lead.demoUrl ?? ""}
+              initialApproachScript={approachScript}
+            />
           </Card>
           <Card className="p-5">
             <h2 className="mb-4 font-semibold text-slate-950">Histórico de contatos</h2>

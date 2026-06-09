@@ -10,6 +10,7 @@ import {
   demoSiteSchema,
   generatedMessageSchema,
   historySchema,
+  leadApproachSchema,
   leadSchema,
   linkDemoSchema,
   loginSchema,
@@ -456,6 +457,38 @@ export async function saveGeneratedMessageAction(leadId: string, _: ActionState,
   }
 
   revalidatePath(`/leads/${leadId}`);
+  return { ok: true };
+}
+
+export async function saveLeadApproachAction(leadId: string, _: ActionState, formData: FormData): Promise<ActionState> {
+  const parsed = leadApproachSchema.safeParse(formObject(formData));
+  if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "Abordagem inválida." };
+
+  try {
+    await prisma.lead.update({
+      where: { id: leadId },
+      data: {
+        recommendedProduct: parsed.data.recommendedProduct,
+        demoUrl: parsed.data.demoUrl,
+        audit: parsed.data.audit,
+        approachScript: parsed.data.approachScript,
+        histories: {
+          create: {
+            type: ContactEventType.MESSAGE_GENERATED,
+            title: "Abordagem pronta atualizada",
+            message: parsed.data.approachScript
+          }
+        }
+      }
+    });
+  } catch (error) {
+    console.error("ERRO AO SALVAR ABORDAGEM DO LEAD:", { leadId, error });
+    return { error: "Não foi possível salvar a abordagem pronta." };
+  }
+
+  revalidatePath(`/leads/${leadId}`);
+  revalidatePath("/leads");
+  revalidatePath("/kanban");
   return { ok: true };
 }
 

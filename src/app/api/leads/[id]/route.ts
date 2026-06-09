@@ -1,6 +1,7 @@
 import { Prisma } from "@prisma/client";
 import { NextResponse } from "next/server";
 import { validateN8nApiKey } from "@/lib/api-auth";
+import { isAuthenticated } from "@/lib/auth";
 import {
   formatLeadForApi,
   historyForN8nUpdate,
@@ -10,8 +11,13 @@ import {
 } from "@/lib/n8n-api";
 import { prisma } from "@/lib/prisma";
 
+async function validateLeadPatchAuth(request: Request) {
+  if (await isAuthenticated()) return null;
+  return validateN8nApiKey(request);
+}
+
 export async function PATCH(request: Request, context: { params: Promise<{ id: string }> }) {
-  const authError = validateN8nApiKey(request);
+  const authError = await validateLeadPatchAuth(request);
   if (authError) return authError;
 
   const { id } = await context.params;

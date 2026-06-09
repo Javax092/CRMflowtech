@@ -96,6 +96,13 @@ export const linkDemoSchema = z.object({
   demoSiteId: z.string().min(1, "Selecione uma demo.")
 });
 
+export const leadApproachSchema = z.object({
+  recommendedProduct: emptyToNull,
+  demoUrl: emptyToNull,
+  audit: emptyToNull,
+  approachScript: z.string().trim().min(20, "A abordagem precisa ter pelo menos 20 caracteres.")
+});
+
 export const loginSchema = z.object({
   email: z.string().email(),
   password: z.string().min(1)
