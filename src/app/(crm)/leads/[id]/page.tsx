@@ -1,3 +1,4 @@
+import { ExternalLink } from "lucide-react";
 import { notFound } from "next/navigation";
 import { deleteLeadAction } from "@/app/actions";
 import { HistoryForm } from "@/components/history-form";
@@ -71,7 +72,15 @@ export default async function LeadDetailPage({ params }: { params: Promise<{ id:
           <Card id="abordagem" className="p-5">
             <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
               <Badge className={statusColors[lead.status]}>{statusLabels[lead.status]}</Badge>
-              <LeadQuickActions id={lead.id} whatsapp={lead.whatsapp} instagram={lead.instagram} responsibleName={lead.responsibleName} companyName={lead.companyName} />
+              <div className="flex flex-wrap gap-2">
+                {lead.demoUrl ? (
+                  <Button href={lead.demoUrl} variant="secondary">
+                    <ExternalLink size={16} />
+                    Abrir Demo
+                  </Button>
+                ) : null}
+                <LeadQuickActions id={lead.id} whatsapp={lead.whatsapp} instagram={lead.instagram} responsibleName={lead.responsibleName} companyName={lead.companyName} />
+              </div>
             </div>
             <div className="grid gap-4 sm:grid-cols-2">
               {fields.map(([label, value]) => (

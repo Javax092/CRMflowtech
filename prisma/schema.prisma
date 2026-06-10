@@ -103,6 +103,7 @@ model Lead {
   city                  String?
   websiteUrl            String?
   demoUrl               String?
+  demoSlug              String?          @unique
   offeredService        OfferedService
   proposedValue         Decimal?         @db.Decimal(12, 2)
   status                LeadStatus       @default(NEW)

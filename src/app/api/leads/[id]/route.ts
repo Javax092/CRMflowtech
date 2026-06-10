@@ -9,6 +9,7 @@ import {
   n8nLeadUpdateSchema,
   pipelineStageFromStatus
 } from "@/lib/n8n-api";
+import { demoUrlFromSlug, uniqueDemoSlug } from "@/lib/demo-url";
 import { prisma } from "@/lib/prisma";
 
 async function validateLeadPatchAuth(request: Request) {
@@ -45,8 +46,16 @@ export async function PATCH(request: Request, context: { params: Promise<{ id: s
   }
 
   try {
-    const existing = await prisma.lead.findUnique({ where: { id }, select: { id: true } });
+    const existing = await prisma.lead.findUnique({ where: { id }, select: { id: true, companyName: true, demoSlug: true } });
     if (!existing) return NextResponse.json({ success: false, error: "Lead não encontrado." }, { status: 404 });
+    const shouldSaveDemo = parsed.data.demoSlug !== undefined || parsed.data.demoUrl !== undefined;
+    const demoSlug = shouldSaveDemo
+      ? existing.demoSlug ?? (await uniqueDemoSlug(prisma, {
+          leadId: id,
+          companyName: existing.companyName,
+          demoSlug: parsed.data.demoSlug
+        }))
+      : undefined;
 
     const lead = await prisma.lead.update({
       where: { id },
@@ -54,7 +63,8 @@ export async function PATCH(request: Request, context: { params: Promise<{ id: s
         status,
         pipelineStage: status ? pipelineStageFromStatus(status) : undefined,
         recommendedProduct: parsed.data.recommendedProduct,
-        demoUrl: parsed.data.demoUrl,
+        demoUrl: demoSlug ? demoUrlFromSlug(demoSlug) : parsed.data.demoUrl,
+        demoSlug,
         audit: parsed.data.audit,
         approachScript: parsed.data.approachScript,
         nextStepNote: parsed.data.nextAction,

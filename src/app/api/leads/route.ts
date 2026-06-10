@@ -11,6 +11,7 @@ import {
   pipelineStageFromStatus,
   segmentFromApi
 } from "@/lib/n8n-api";
+import { demoUrlFromSlug, uniqueDemoSlug } from "@/lib/demo-url";
 import { normalizeLeadInput } from "@/lib/normalizers";
 import { prisma } from "@/lib/prisma";
 
@@ -154,7 +155,26 @@ export async function POST(request: Request) {
     }
 
     const lead = await prisma.lead.create({ data });
-    return NextResponse.json({ success: true, lead: formatLeadForApi(lead) }, { status: 201 });
+    const shouldSaveDemo = parsed.data.demoSlug !== undefined || parsed.data.demoUrl !== undefined;
+    const savedLead = shouldSaveDemo
+      ? await prisma.lead.update({
+          where: { id: lead.id },
+          data: {
+            demoSlug: await uniqueDemoSlug(prisma, {
+              leadId: lead.id,
+              companyName: lead.companyName,
+              demoSlug: parsed.data.demoSlug
+            })
+          }
+        })
+      : lead;
+    const leadWithDemoUrl = shouldSaveDemo && savedLead.demoSlug
+      ? await prisma.lead.update({
+          where: { id: savedLead.id },
+          data: { demoUrl: demoUrlFromSlug(savedLead.demoSlug) }
+        })
+      : savedLead;
+    return NextResponse.json({ success: true, lead: formatLeadForApi(leadWithDemoUrl) }, { status: 201 });
   } catch (error) {
     if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
       const duplicate = await findDuplicateLead(data);

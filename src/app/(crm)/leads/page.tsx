@@ -5,6 +5,7 @@ import { Badge, Button, Card, PageHeader } from "@/components/ui";
 import { currency, date } from "@/lib/format";
 import { segmentLabels, serviceLabels, statusColors, statusLabels } from "@/lib/labels";
 import { prisma } from "@/lib/prisma";
+import { ExternalLink } from "lucide-react";
 
 export default async function LeadsPage({ searchParams }: { searchParams: Promise<{ q?: string }> }) {
   const { q } = await searchParams;
@@ -59,6 +60,12 @@ export default async function LeadsPage({ searchParams }: { searchParams: Promis
                     <div className="grid gap-2">
                       <div className="flex flex-wrap gap-2">
                         <Button href={`/leads/${lead.id}`} variant="secondary">Ver</Button>
+                        {lead.demoUrl ? (
+                          <Button href={lead.demoUrl} variant="secondary">
+                            <ExternalLink size={16} />
+                            Abrir Demo
+                          </Button>
+                        ) : null}
                         <Button href={`/leads/${lead.id}/edit`} variant="secondary">Editar</Button>
                         <form action={deleteLeadAction.bind(null, lead.id)}>
                           <Button type="submit" variant="danger">Excluir</Button>

@@ -22,6 +22,7 @@ export const leadSchema = z
     city: emptyToNull,
     websiteUrl: emptyToNull,
     demoUrl: emptyToNull,
+    demoSlug: emptyToNull,
     offeredService: z.nativeEnum(OfferedService),
     proposedValue: moneyField,
     status: z.nativeEnum(LeadStatus),
@@ -99,6 +100,7 @@ export const linkDemoSchema = z.object({
 export const leadApproachSchema = z.object({
   recommendedProduct: emptyToNull,
   demoUrl: emptyToNull,
+  demoSlug: emptyToNull,
   audit: emptyToNull,
   approachScript: z.string().trim().min(20, "A abordagem precisa ter pelo menos 20 caracteres.")
 });

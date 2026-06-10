@@ -13,6 +13,8 @@ export const n8nLeadCreateSchema = z.object({
   city: emptyToNull,
   whatsapp: emptyToNull,
   email: emptyToNull,
+  demoUrl: emptyToNull,
+  demoSlug: emptyToNull,
   notes: emptyToNull,
   status: z.string().trim().optional()
 });
@@ -22,6 +24,7 @@ export const n8nLeadUpdateSchema = z
     status: z.string().trim().optional(),
     recommendedProduct: emptyToNull,
     demoUrl: emptyToNull,
+    demoSlug: emptyToNull,
     audit: emptyToNull,
     approachScript: emptyToNull,
     nextAction: emptyToNull

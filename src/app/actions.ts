@@ -4,6 +4,7 @@ import { Prisma, ContactEventType, LeadStatus, PipelineStage } from "@prisma/cli
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { signIn, signOut } from "@/lib/auth";
+import { demoUrlFromSlug, uniqueDemoSlug } from "@/lib/demo-url";
 import { normalizeLeadInput } from "@/lib/normalizers";
 import { prisma } from "@/lib/prisma";
 import {
@@ -41,6 +42,7 @@ function uniqueConstraintMessage(error: Prisma.PrismaClientKnownRequestError) {
   if (target.includes("whatsapp")) return "Já existe um lead com este WhatsApp.";
   if (target.includes("instagram")) return "Já existe um lead com este Instagram.";
   if (target.includes("email")) return "Já existe um lead com este e-mail.";
+  if (target.includes("demoSlug")) return "Já existe uma demo com este slug.";
 
   return "Já existe um lead com estes dados.";
 }
@@ -465,11 +467,24 @@ export async function saveLeadApproachAction(leadId: string, _: ActionState, for
   if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "Abordagem inválida." };
 
   try {
+    const lead = await prisma.lead.findUnique({
+      where: { id: leadId },
+      select: { id: true, companyName: true, demoSlug: true }
+    });
+    if (!lead) return { error: "Lead não encontrado." };
+
+    const demoSlug = lead.demoSlug ?? (await uniqueDemoSlug(prisma, {
+      leadId,
+      companyName: lead.companyName,
+      demoSlug: parsed.data.demoSlug
+    }));
+
     await prisma.lead.update({
       where: { id: leadId },
       data: {
         recommendedProduct: parsed.data.recommendedProduct,
-        demoUrl: parsed.data.demoUrl,
+        demoUrl: demoUrlFromSlug(demoSlug),
+        demoSlug,
         audit: parsed.data.audit,
         approachScript: parsed.data.approachScript,
         histories: {
@@ -539,18 +554,29 @@ export async function linkDemoToLeadAction(leadId: string, _: ActionState, formD
   try {
     const demo = await prisma.demoSite.findUnique({ where: { id: parsed.data.demoSiteId } });
     if (!demo) return { error: "Demo não encontrada." };
+    const lead = await prisma.lead.findUnique({
+      where: { id: leadId },
+      select: { id: true, companyName: true, demoSlug: true }
+    });
+    if (!lead) return { error: "Lead não encontrado." };
+
+    const demoSlug = lead.demoSlug ?? (await uniqueDemoSlug(prisma, {
+      leadId,
+      companyName: lead.companyName
+    }));
 
     await prisma.lead.update({
       where: { id: leadId },
       data: {
         demoSiteId: demo.id,
-        demoUrl: demo.url,
+        demoSlug,
+        demoUrl: demoUrlFromSlug(demoSlug),
         pipelineStage: PipelineStage.DEMO_CRIADA,
         histories: {
           create: {
             type: ContactEventType.DEMO_LINKED,
             title: "Demo vinculada",
-            message: `Demo vinculada: ${demo.name} - ${demo.url}`
+            message: `Demo vinculada: ${demo.name} - ${demoUrlFromSlug(demoSlug)}`
           }
         }
       }

@@ -20,6 +20,7 @@ type LeadFormProps = {
     city?: string | null;
     websiteUrl?: string | null;
     demoUrl?: string | null;
+    demoSlug?: string | null;
     offeredService: OfferedService;
     proposedValue?: string | null;
     status: LeadStatus;
@@ -95,6 +96,9 @@ export function LeadForm({ lead }: LeadFormProps) {
           </Field>
           <Field label="Demonstração criada">
             <input className={inputClass} name="demoUrl" type="url" defaultValue={lead?.demoUrl ?? ""} />
+          </Field>
+          <Field label="Slug da demo">
+            <input className={inputClass} name="demoSlug" defaultValue={lead?.demoSlug ?? ""} />
           </Field>
           <Field label="Serviço ofertado" required>
             <select className={inputClass} name="offeredService" defaultValue={lead?.offeredService ?? OfferedService.WEBSITE}>
