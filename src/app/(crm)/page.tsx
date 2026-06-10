@@ -1,5 +1,6 @@
 import { endOfDay, startOfDay } from "date-fns";
-import { Card, PageHeader } from "@/components/ui";
+import { Button, Card, PageHeader } from "@/components/ui";
+import { getLeadDemoStatus } from "@/lib/demo-status";
 import { currency } from "@/lib/format";
 import { statusLabels } from "@/lib/labels";
 import { prisma } from "@/lib/prisma";
@@ -7,21 +8,27 @@ import { prisma } from "@/lib/prisma";
 export default async function DashboardPage() {
   const todayStart = startOfDay(new Date());
   const todayEnd = endOfDay(new Date());
-  const [total, byStatus, followUpsToday, potential, won] = await Promise.all([
+  const [total, byStatus, followUpsToday, potential, won, demoStatus] = await Promise.all([
     prisma.lead.count(),
     prisma.lead.groupBy({ by: ["status"], _count: true }),
     prisma.lead.count({ where: { nextFollowUpAt: { gte: todayStart, lte: todayEnd }, status: { notIn: ["WON", "LOST"] } } }),
     prisma.deal.aggregate({ _sum: { value: true } }),
-    prisma.deal.aggregate({ _sum: { value: true }, where: { won: true } })
+    prisma.deal.aggregate({ _sum: { value: true }, where: { won: true } }),
+    getLeadDemoStatus(prisma)
   ]);
 
   const count = (status: string) => byStatus.find((item) => item.status === status)?._count ?? 0;
   const closed = count("WON");
   const conversion = total ? Math.round((closed / total) * 100) : 0;
   const cards = [
-    ["Total de leads", total],
-    ["Leads novos", count("NEW")],
-    ["Leads abordados", count("CONTACTED")],
+    ["Total de leads", demoStatus.totalLeads],
+    ["Total NOVO_LEAD", demoStatus.novoLead],
+    ["Total ABORDADO", demoStatus.abordado],
+    ["Total com demo criada", demoStatus.comDemo],
+    ["Total sem demo", demoStatus.semDemo],
+    ["Total ABORDADO sem demo", demoStatus.abordadoSemDemo],
+    ["Total NOVO_LEAD com demo", demoStatus.novoLeadComDemo],
+    ["Total NOVO_LEAD sem demo", demoStatus.novoLeadSemDemo],
     ["Leads interessados", count("INTERESTED")],
     ["Em negociação", count("PROPOSAL_SENT") + count("MEETING_SCHEDULED")],
     ["Clientes fechados", closed],
@@ -32,7 +39,14 @@ export default async function DashboardPage() {
 
   return (
     <div className="grid gap-6">
-      <PageHeader title="Dashboard" subtitle="Visão geral do funil comercial da FlowtechAM." />
+      <PageHeader
+        title="Dashboard"
+        subtitle="Visão geral do funil comercial da FlowtechAM."
+        action={<Button href="/admin/demos" variant="secondary">Monitorar demos</Button>}
+      />
+      <Card className="border-amber-200 bg-amber-50 p-4 text-sm font-medium text-amber-900">
+        Faltam {demoStatus.semDemo} demos para concluir todos os leads.
+      </Card>
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
         {cards.map(([label, value]) => (
           <Card key={label} className="p-5">

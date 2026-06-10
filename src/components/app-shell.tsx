@@ -1,4 +1,4 @@
-import { BarChart3, CalendarCheck2, CalendarClock, KanbanSquare, LayoutDashboard, Library, LogOut, MessageSquareText, PlusCircle, Settings, Users } from "lucide-react";
+import { BarChart3, CalendarCheck2, CalendarClock, KanbanSquare, LayoutDashboard, Library, LogOut, MessageSquareText, MonitorCheck, PlusCircle, Settings, Users } from "lucide-react";
 import Link from "next/link";
 import { logoutAction } from "@/app/actions";
 import { PwaInstall } from "@/components/pwa-install";
@@ -10,6 +10,7 @@ const items = [
   { href: "/kanban", label: "Pipeline", icon: KanbanSquare },
   { href: "/leads", label: "Leads", icon: Users },
   { href: "/", label: "Dashboard", icon: LayoutDashboard },
+  { href: "/admin/demos", label: "Monitorar demos", icon: MonitorCheck },
   { href: "/follow-ups", label: "Follow-ups", icon: CalendarClock },
   { href: "/demos", label: "Demos", icon: Library },
   { href: "/scripts", label: "Scripts", icon: MessageSquareText },
