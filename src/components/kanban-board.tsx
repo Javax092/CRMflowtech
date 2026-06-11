@@ -3,6 +3,7 @@
 import { LeadSource, OfferedService, PipelineStage, Segment } from "@prisma/client";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { followUpStepLabel } from "@/lib/follow-up-sequence";
 import { currency, date } from "@/lib/format";
 import { pipelineStageLabels, segmentLabels, serviceLabels, sourceLabels } from "@/lib/labels";
 import { inputClass } from "@/components/ui";
@@ -20,6 +21,8 @@ type KanbanLead = {
   instagram?: string | null;
   proposedValue?: string | null;
   nextFollowUpAt?: string | Date | null;
+  followUpCount: number;
+  followUpSequenceLength: number;
 };
 
 const columns: PipelineStage[] = [
@@ -116,6 +119,7 @@ export function KanbanBoard({ leads }: { leads: KanbanLead[] }) {
                       <span>{lead.whatsapp ?? (lead.instagram ? `@${lead.instagram}` : "Sem canal principal")}</span>
                       <span>{currency(lead.proposedValue)}</span>
                       <span>Follow-up: {date(lead.nextFollowUpAt)}</span>
+                      <span>Sequência: {followUpStepLabel(lead.followUpCount + 1, lead.followUpSequenceLength)}</span>
                     </div>
                     <select
                       className={`${inputClass} mt-3 min-h-9 py-1 text-xs`}

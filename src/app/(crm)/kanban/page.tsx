@@ -16,7 +16,9 @@ export default async function KanbanPage() {
       whatsapp: true,
       instagram: true,
       proposedValue: true,
-      nextFollowUpAt: true
+      nextFollowUpAt: true,
+      followUpCount: true,
+      followUpSequenceLength: true
     },
     orderBy: { updatedAt: "desc" }
   });

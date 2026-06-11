@@ -10,7 +10,9 @@ import {
   pipelineStageFromStatus
 } from "@/lib/n8n-api";
 import { demoUrlFromSlug, uniqueDemoSlug } from "@/lib/demo-url";
+import { canceledSequenceUpdate, isAdvancedPipelineStage } from "@/lib/follow-up-sequence";
 import { prisma } from "@/lib/prisma";
+import { pipelineStageLabels } from "@/lib/labels";
 
 async function validateLeadPatchAuth(request: Request) {
   if (await isAuthenticated()) return null;
@@ -57,11 +59,13 @@ export async function PATCH(request: Request, context: { params: Promise<{ id: s
         }))
       : undefined;
 
+    const pipelineStage = status ? pipelineStageFromStatus(status) : undefined;
     const lead = await prisma.lead.update({
       where: { id },
       data: {
         status,
-        pipelineStage: status ? pipelineStageFromStatus(status) : undefined,
+        pipelineStage,
+        ...(pipelineStage && isAdvancedPipelineStage(pipelineStage) ? canceledSequenceUpdate(pipelineStageLabels[pipelineStage]) : {}),
         recommendedProduct: parsed.data.recommendedProduct,
         demoUrl: demoSlug ? demoUrlFromSlug(demoSlug) : parsed.data.demoUrl,
         demoSlug,

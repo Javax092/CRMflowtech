@@ -46,6 +46,13 @@ const defaultScripts: SimpleScript[] = [
       "Olá, {{nome}}.\n\nEstou organizando as próximas demos da semana e quis te chamar antes de seguir com outros segmentos. A {{empresa}} tem um bom potencial para melhorar {{objetivo}} com uma presença digital mais clara.\n\n{{blocoDemo}}\nQuer que eu te mostre o caminho mais simples?"
   },
   {
+    id: "default-closing",
+    name: "Follow-up de encerramento",
+    type: ScriptType.FOLLOW_UP_3,
+    content:
+      "Olá, {{nome}}.\n\nImagino que a rotina esteja corrida. Vou encerrar este contato para não incomodar. Mas caso tenha interesse em conhecer as oportunidades que identifiquei para aumentar as vendas e fortalecer a presença digital da {{empresa}}, fico à disposição.\n\nSucesso para vocês!"
+  },
+  {
     id: "default-website",
     name: "Proposta de site profissional",
     type: ScriptType.WEBSITE_PROPOSAL,

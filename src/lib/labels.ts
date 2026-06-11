@@ -1,5 +1,6 @@
 import {
   ContactEventType,
+  FollowUpSequenceStatus,
   LeadSource,
   LeadStatus,
   OfferedService,
@@ -74,6 +75,7 @@ export const scriptLabels: Record<ScriptType, string> = {
   FIRST_APPROACH: "Primeira abordagem",
   FOLLOW_UP_1: "Follow-up 1",
   FOLLOW_UP_2: "Follow-up 2",
+  FOLLOW_UP_3: "Follow-up 3",
   WEBSITE_PROPOSAL: "Proposta de site",
   SYSTEM_PROPOSAL: "Proposta de sistema",
   MONTHLY_PROPOSAL: "Proposta de mensalidade"
@@ -101,4 +103,11 @@ export const pipelineStageLabels: Record<PipelineStage, string> = {
   NEGOCIACAO: "Negociação",
   FECHADO: "Fechado",
   PERDIDO: "Perdido"
+};
+
+export const followUpSequenceStatusLabels: Record<FollowUpSequenceStatus, string> = {
+  ACTIVE: "Ativa",
+  PAUSED: "Pausada",
+  COMPLETED: "Concluída",
+  CANCELED: "Cancelada"
 };

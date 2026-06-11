@@ -2,7 +2,7 @@
 
 import { LeadStatus } from "@prisma/client";
 import { Copy, Instagram, MessageCircle } from "lucide-react";
-import { updateLeadStatusAction } from "@/app/actions";
+import { markLeadMessageSentAction, updateLeadStatusAction } from "@/app/actions";
 import { Button } from "@/components/ui";
 
 type LeadActionProps = {
@@ -18,7 +18,7 @@ export function LeadQuickActions({ id, whatsapp, instagram, responsibleName, com
 
   return (
     <div className="flex flex-wrap gap-2">
-      <Button variant="secondary" onClick={() => updateLeadStatusAction(id, LeadStatus.CONTACTED)}>Abordado</Button>
+      <Button variant="secondary" onClick={() => markLeadMessageSentAction(id)}>Abordado</Button>
       <Button variant="secondary" onClick={() => updateLeadStatusAction(id, LeadStatus.INTERESTED)}>Interessado</Button>
       <Button variant="secondary" onClick={() => updateLeadStatusAction(id, LeadStatus.WON)}>Fechado</Button>
       <Button variant="secondary" onClick={() => updateLeadStatusAction(id, LeadStatus.LOST)}>Perdido</Button>

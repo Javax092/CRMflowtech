@@ -1,10 +1,20 @@
 "use server";
 
-import { Prisma, ContactEventType, LeadStatus, PipelineStage } from "@prisma/client";
+import { Prisma, ContactEventType, FollowUpSequenceStatus, LeadStatus, PipelineStage } from "@prisma/client";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { signIn, signOut } from "@/lib/auth";
 import { demoUrlFromSlug, uniqueDemoSlug } from "@/lib/demo-url";
+import {
+  canceledSequenceUpdate,
+  followUpSentSequenceUpdate,
+  isAdvancedPipelineStage,
+  messageSentSequenceUpdate,
+  nextFollowUpAction,
+  normalizeSequenceLength,
+  pausedSequenceUpdate,
+  statusFromPipelineStage
+} from "@/lib/follow-up-sequence";
 import { normalizeLeadInput } from "@/lib/normalizers";
 import { prisma } from "@/lib/prisma";
 import {
@@ -221,11 +231,42 @@ export async function deleteLeadAction(id: string) {
 }
 
 export async function updateLeadStatusAction(id: string, status: LeadStatus) {
+  const now = new Date();
+  const pipelineStage = stageFromStatus(status);
+  const shouldCancelSequence = isAdvancedPipelineStage(pipelineStage);
+  const lead =
+    status === LeadStatus.CONTACTED
+      ? await prisma.lead.findUnique({
+          where: { id },
+          select: {
+            firstContactAt: true,
+            firstMessageSentAt: true,
+            nextFollowUpAt: true,
+            followUpCount: true,
+            followUpSequenceLength: true,
+            followUpSequenceStatus: true
+          }
+        })
+      : null;
+  const contactedSequence =
+    status === LeadStatus.CONTACTED && lead?.firstMessageSentAt && lead.followUpCount === 0 && lead.nextFollowUpAt && lead.followUpSequenceStatus === FollowUpSequenceStatus.ACTIVE
+      ? {}
+      : status === LeadStatus.CONTACTED
+        ? messageSentSequenceUpdate({
+            now,
+            firstContactAt: lead?.firstContactAt,
+            firstMessageSentAt: lead?.firstMessageSentAt,
+            sequenceLength: lead?.followUpSequenceLength
+          })
+        : {};
+
   await prisma.lead.update({
     where: { id },
     data: {
       status,
-      lastContactAt: new Date(),
+      pipelineStage,
+      lastContactAt: now,
+      ...(status === LeadStatus.CONTACTED ? contactedSequence : shouldCancelSequence ? canceledSequenceUpdate(pipelineStageLabels[pipelineStage]) : {}),
       histories: {
         create: {
           type: status === LeadStatus.WON ? ContactEventType.CLIENT_WON : status === LeadStatus.LOST ? ContactEventType.CLIENT_DECLINED : ContactEventType.FOLLOW_UP,
@@ -250,11 +291,14 @@ export async function updateLeadPipelineStageAction(id: string, _: ActionState, 
 
     if (lead.pipelineStage === parsed.data.pipelineStage) return { ok: true };
 
+    const shouldCancelSequence = isAdvancedPipelineStage(parsed.data.pipelineStage);
     await prisma.lead.update({
       where: { id },
       data: {
         pipelineStage: parsed.data.pipelineStage,
+        status: statusFromPipelineStage(parsed.data.pipelineStage),
         lastContactAt: new Date(),
+        ...(shouldCancelSequence ? canceledSequenceUpdate(pipelineStageLabels[parsed.data.pipelineStage]) : {}),
         histories: {
           create: {
             type: ContactEventType.PIPELINE_CHANGED,
@@ -289,19 +333,54 @@ export async function markLeadMessageSentAction(leadId: string): Promise<ActionS
   try {
     const lead = await prisma.lead.findUnique({
       where: { id: leadId },
-      select: { pipelineStage: true, status: true }
+      select: {
+        pipelineStage: true,
+        status: true,
+        firstContactAt: true,
+        firstMessageSentAt: true,
+        nextFollowUpAt: true,
+        followUpCount: true,
+        followUpSequenceLength: true,
+        followUpSequenceStatus: true
+      }
     });
     if (!lead) return { error: "Lead não encontrado." };
     if (lead.pipelineStage === PipelineStage.FECHADO || lead.pipelineStage === PipelineStage.PERDIDO) {
       return { error: "Lead fechado ou perdido não pode ser marcado como mensagem enviada." };
     }
 
+    if (
+      lead.firstMessageSentAt &&
+      lead.followUpCount === 0 &&
+      lead.nextFollowUpAt &&
+      lead.followUpSequenceStatus === FollowUpSequenceStatus.ACTIVE
+    ) {
+      return { ok: true };
+    }
+
+    const now = new Date();
+    const sequence = messageSentSequenceUpdate({
+      now,
+      firstMessageSentAt: lead.firstMessageSentAt,
+      firstContactAt: lead.firstContactAt,
+      sequenceLength: lead.followUpSequenceLength
+    });
+
     await prisma.lead.update({
       where: { id: leadId },
       data: {
         status: LeadStatus.CONTACTED,
         pipelineStage: PipelineStage.MENSAGEM_ENVIADA,
-        lastContactAt: new Date(),
+        ...sequence,
+        followUps: sequence.nextFollowUpAt
+          ? {
+              create: {
+                dueAt: sequence.nextFollowUpAt,
+                type: sequence.followUpType,
+                note: sequence.nextAction
+              }
+            }
+          : undefined,
         histories: {
           create: {
             type: ContactEventType.PIPELINE_CHANGED,
@@ -325,6 +404,163 @@ export async function markLeadMessageSentAction(leadId: string): Promise<ActionS
 
 export async function markLeadMessageSentFormAction(leadId: string, _: ActionState): Promise<ActionState> {
   return markLeadMessageSentAction(leadId);
+}
+
+export async function markLeadFollowUpSentAction(leadId: string): Promise<ActionState> {
+  try {
+    const lead = await prisma.lead.findUnique({
+      where: { id: leadId },
+      select: {
+        pipelineStage: true,
+        firstMessageSentAt: true,
+        nextFollowUpAt: true,
+        followUpCount: true,
+        followUpSequenceLength: true,
+        followUpSequenceStatus: true
+      }
+    });
+    if (!lead) return { error: "Lead não encontrado." };
+    if (lead.pipelineStage === PipelineStage.FECHADO || lead.pipelineStage === PipelineStage.PERDIDO) {
+      return { error: "Lead fechado ou perdido não pode receber follow-up." };
+    }
+    if (lead.followUpSequenceStatus !== FollowUpSequenceStatus.ACTIVE) {
+      return { error: "A sequência de follow-up não está ativa." };
+    }
+
+    const now = new Date();
+    const firstMessageSentAt = lead.firstMessageSentAt ?? now;
+    const sentStep = Math.min(lead.followUpCount + 1, normalizeSequenceLength(lead.followUpSequenceLength));
+    const sequence = followUpSentSequenceUpdate({
+      now,
+      firstMessageSentAt,
+      followUpCount: lead.followUpCount,
+      sequenceLength: lead.followUpSequenceLength
+    });
+
+    await prisma.lead.update({
+      where: { id: leadId },
+      data: {
+        firstMessageSentAt,
+        ...sequence,
+        followUps: {
+          updateMany: {
+            where: {
+              completedAt: null,
+              ...(lead.nextFollowUpAt ? { dueAt: lead.nextFollowUpAt } : {})
+            },
+            data: { completedAt: now }
+          },
+          ...(sequence.nextFollowUpAt
+            ? {
+                create: {
+                  dueAt: sequence.nextFollowUpAt,
+                  type: sequence.followUpType ?? "Follow-up",
+                  note: sequence.nextAction
+                }
+              }
+            : {})
+        },
+        histories: {
+          create: {
+            type: ContactEventType.FOLLOW_UP,
+            title: `Follow-up ${sentStep} enviado`,
+            message:
+              sequence.followUpSequenceStatus === FollowUpSequenceStatus.COMPLETED
+                ? "Sequência de follow-ups concluída."
+                : sequence.nextAction
+          }
+        }
+      }
+    });
+  } catch (error) {
+    console.error("ERRO AO MARCAR FOLLOW-UP ENVIADO:", { leadId, error });
+    return { error: "Não foi possível marcar o follow-up como enviado." };
+  }
+
+  revalidateLeadWorkspaces(leadId);
+  return { ok: true };
+}
+
+export async function markLeadFollowUpSentFormAction(leadId: string, _: ActionState): Promise<ActionState> {
+  return markLeadFollowUpSentAction(leadId);
+}
+
+export async function pauseLeadFollowUpSequenceFormAction(leadId: string, _: ActionState): Promise<ActionState> {
+  try {
+    await prisma.lead.update({
+      where: { id: leadId },
+      data: {
+        ...pausedSequenceUpdate(),
+        histories: {
+          create: {
+            type: ContactEventType.FOLLOW_UP,
+            title: "Sequência pausada",
+            message: "Sequência automática de follow-ups pausada."
+          }
+        }
+      }
+    });
+  } catch (error) {
+    console.error("ERRO AO PAUSAR SEQUÊNCIA:", { leadId, error });
+    return { error: "Não foi possível pausar a sequência." };
+  }
+
+  revalidateLeadWorkspaces(leadId);
+  return { ok: true };
+}
+
+export async function cancelLeadFollowUpSequenceFormAction(leadId: string, _: ActionState): Promise<ActionState> {
+  try {
+    await prisma.lead.update({
+      where: { id: leadId },
+      data: {
+        ...canceledSequenceUpdate(),
+        histories: {
+          create: {
+            type: ContactEventType.FOLLOW_UP,
+            title: "Sequência cancelada",
+            message: "Sequência automática de follow-ups cancelada."
+          }
+        }
+      }
+    });
+  } catch (error) {
+    console.error("ERRO AO CANCELAR SEQUÊNCIA:", { leadId, error });
+    return { error: "Não foi possível cancelar a sequência." };
+  }
+
+  revalidateLeadWorkspaces(leadId);
+  return { ok: true };
+}
+
+export async function moveLeadToRespondedFormAction(leadId: string, _: ActionState): Promise<ActionState> {
+  try {
+    const lead = await prisma.lead.findUnique({ where: { id: leadId }, select: { pipelineStage: true } });
+    if (!lead) return { error: "Lead não encontrado." };
+
+    await prisma.lead.update({
+      where: { id: leadId },
+      data: {
+        status: LeadStatus.RESPONDED,
+        pipelineStage: PipelineStage.RESPONDEU,
+        lastContactAt: new Date(),
+        ...canceledSequenceUpdate(pipelineStageLabels[PipelineStage.RESPONDEU]),
+        histories: {
+          create: {
+            type: ContactEventType.CLIENT_REPLIED,
+            title: "Lead moveu para respondeu",
+            message: `Pipeline alterado de ${pipelineStageLabels[lead.pipelineStage]} para ${pipelineStageLabels[PipelineStage.RESPONDEU]}`
+          }
+        }
+      }
+    });
+  } catch (error) {
+    console.error("ERRO AO MOVER LEAD PARA RESPONDEU:", { leadId, error });
+    return { error: "Não foi possível mover o lead para respondeu." };
+  }
+
+  revalidateLeadWorkspaces(leadId);
+  return { ok: true };
 }
 
 export async function scheduleLeadFollowUpAction(leadId: string, _: ActionState, formData: FormData): Promise<ActionState> {
@@ -351,6 +587,7 @@ export async function scheduleLeadFollowUpAction(leadId: string, _: ActionState,
         nextFollowUpAt,
         followUpType,
         nextStepNote: parsed.data.nextStepNote,
+        nextAction: parsed.data.nextStepNote ?? "Follow-up agendado",
         followUps: {
           create: {
             dueAt: nextFollowUpAt,
@@ -391,6 +628,7 @@ export async function markLeadLostAction(leadId: string): Promise<ActionState> {
         status: LeadStatus.LOST,
         pipelineStage: PipelineStage.PERDIDO,
         lastContactAt: new Date(),
+        ...canceledSequenceUpdate(pipelineStageLabels[PipelineStage.PERDIDO]),
         histories: {
           create: {
             type: ContactEventType.PIPELINE_CHANGED,

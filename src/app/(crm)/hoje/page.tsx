@@ -4,6 +4,8 @@ import { AlertTriangle, CheckSquare, CircleDollarSign, Clock3, ListTodo, Send, U
 import type { ComponentType } from "react";
 import { DailyLeadActions } from "@/components/daily-lead-actions";
 import { Badge, Card, PageHeader } from "@/components/ui";
+import { backfillMessageSentFollowUps } from "@/lib/follow-up-backfill";
+import { followUpStepLabel } from "@/lib/follow-up-sequence";
 import { currency, date } from "@/lib/format";
 import { pipelineStageLabels, segmentLabels } from "@/lib/labels";
 import { prisma } from "@/lib/prisma";
@@ -21,8 +23,14 @@ const dailyLeadSelect = {
   whatsapp: true,
   instagram: true,
   pipelineStage: true,
+  firstMessageSentAt: true,
+  firstContactAt: true,
   nextFollowUpAt: true,
+  followUpCount: true,
+  followUpSequenceLength: true,
+  followUpSequenceStatus: true,
   proposedValue: true,
+  nextAction: true,
   nextStepNote: true
 } satisfies Prisma.LeadSelect;
 
@@ -44,6 +52,8 @@ function moneyTotal(leads: DailyLead[]) {
 }
 
 async function getDailyWork() {
+  await backfillMessageSentFollowUps(prisma);
+
   const now = new Date();
   const todayStart = startOfDay(now);
   const todayEnd = endOfDay(now);
@@ -60,7 +70,7 @@ async function getDailyWork() {
       orderBy: { nextFollowUpAt: "asc" }
     }),
     prisma.lead.findMany({
-      where: { ...activeLeadWhere, nextFollowUpAt: null },
+      where: { ...activeLeadWhere, pipelineStage: PipelineStage.MENSAGEM_ENVIADA, nextFollowUpAt: null },
       select: dailyLeadSelect,
       orderBy: { updatedAt: "asc" }
     }),
@@ -81,7 +91,13 @@ async function getDailyWork() {
     })
   ]);
 
-  return { overdueFollowUps, todayFollowUps, withoutNextStep, newLeads, openProposals, demosWithoutMessage };
+  const overdueByStep = {
+    step1: overdueFollowUps.filter((lead) => lead.followUpCount === 0),
+    step2: overdueFollowUps.filter((lead) => lead.followUpCount === 1),
+    step3: overdueFollowUps.filter((lead) => lead.followUpCount >= 2)
+  };
+
+  return { overdueFollowUps, overdueByStep, todayFollowUps, withoutNextStep, newLeads, openProposals, demosWithoutMessage };
 }
 
 function SummaryCard({
@@ -127,8 +143,16 @@ function LeadCard({ lead, urgent = false }: { lead: DailyLead; urgent?: boolean 
               <strong className="text-right text-slate-900">{pipelineStageLabels[lead.pipelineStage]}</strong>
             </div>
             <div className="flex items-center justify-between gap-3">
+              <span className="text-slate-500">Primeiro contato</span>
+              <strong className="text-slate-900">{date(lead.firstMessageSentAt ?? lead.firstContactAt)}</strong>
+            </div>
+            <div className="flex items-center justify-between gap-3">
               <span className="text-slate-500">Follow-up</span>
               <strong className={urgent ? "text-rose-700" : "text-slate-900"}>{date(lead.nextFollowUpAt)}</strong>
+            </div>
+            <div className="flex items-center justify-between gap-3">
+              <span className="text-slate-500">Sequência</span>
+              <strong className="text-slate-900">{followUpStepLabel(lead.followUpCount + 1, lead.followUpSequenceLength)}</strong>
             </div>
             <div className="flex items-center justify-between gap-3">
               <span className="text-slate-500">Valor</span>
@@ -136,7 +160,7 @@ function LeadCard({ lead, urgent = false }: { lead: DailyLead; urgent?: boolean 
             </div>
           </div>
         </div>
-        {lead.nextStepNote ? <p className="rounded-md bg-white/70 p-3 text-sm text-slate-700">{lead.nextStepNote}</p> : null}
+        {lead.nextAction || lead.nextStepNote ? <p className="rounded-md bg-white/70 p-3 text-sm text-slate-700">{lead.nextAction ?? lead.nextStepNote}</p> : null}
         <DailyLeadActions leadId={lead.id} />
       </div>
     </Card>
@@ -219,13 +243,25 @@ export default async function TodayPage() {
 
       <div className="grid gap-8">
         <WorkSection
-          title="Follow-ups atrasados"
-          subtitle="Leads com retorno vencido antes de hoje."
-          leads={groups.overdueFollowUps}
+          title="Follow-up 1 atrasado"
+          subtitle="Primeiro retorno vencido antes de hoje."
+          leads={groups.overdueByStep.step1}
+          urgent
+        />
+        <WorkSection
+          title="Follow-up 2 atrasado"
+          subtitle="Segundo retorno vencido antes de hoje."
+          leads={groups.overdueByStep.step2}
+          urgent
+        />
+        <WorkSection
+          title="Follow-up 3 atrasado"
+          subtitle="Último retorno vencido antes de hoje."
+          leads={groups.overdueByStep.step3}
           urgent
         />
         <WorkSection title="Follow-ups de hoje" subtitle="Retornos que precisam acontecer ainda hoje." leads={groups.todayFollowUps} />
-        <WorkSection title="Leads sem próximo passo" subtitle="Leads ativos sem próximo follow-up definido." leads={groups.withoutNextStep} />
+        <WorkSection title="Leads em Mensagem enviada sem próximo passo" subtitle="Leads abordados sem próximo follow-up definido." leads={groups.withoutNextStep} />
         <WorkSection title="Leads novos ainda não abordados" subtitle="Pipeline em Lead encontrado." leads={groups.newLeads} />
         <WorkSection title="Propostas abertas" subtitle="Pipeline em Proposta enviada ou Negociação." leads={groups.openProposals} />
         <WorkSection title="Demos criadas sem mensagem enviada" subtitle="Pipeline em Demo criada aguardando abordagem." leads={groups.demosWithoutMessage} />

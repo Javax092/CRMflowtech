@@ -1,6 +1,7 @@
 import { ExternalLink } from "lucide-react";
 import { notFound } from "next/navigation";
 import { deleteLeadAction } from "@/app/actions";
+import { DailyLeadActions } from "@/components/daily-lead-actions";
 import { HistoryForm } from "@/components/history-form";
 import { LeadApproachPanel } from "@/components/lead-approach-panel";
 import { LeadDemoLinkForm } from "@/components/lead-demo-link-form";
@@ -8,8 +9,9 @@ import { LeadQuickActions } from "@/components/lead-actions";
 import { ScriptMessage } from "@/components/script-message";
 import { Badge, Button, Card, PageHeader } from "@/components/ui";
 import { generateLeadApproach, recommendedProductForLead } from "@/lib/approach";
+import { followUpStepLabel } from "@/lib/follow-up-sequence";
 import { currency, date } from "@/lib/format";
-import { eventLabels, pipelineStageLabels, segmentLabels, serviceLabels, sourceLabels, statusColors, statusLabels } from "@/lib/labels";
+import { eventLabels, followUpSequenceStatusLabels, pipelineStageLabels, segmentLabels, serviceLabels, sourceLabels, statusColors, statusLabels } from "@/lib/labels";
 import { prisma } from "@/lib/prisma";
 
 export default async function LeadDetailPage({ params }: { params: Promise<{ id: string }> }) {
@@ -47,9 +49,13 @@ export default async function LeadDetailPage({ params }: { params: Promise<{ id:
     ["Valor proposto", currency(lead.proposedValue?.toString())],
     ["Pipeline", pipelineStageLabels[lead.pipelineStage]],
     ["Origem", sourceLabels[lead.source]],
+    ["Primeira mensagem enviada", date(lead.firstMessageSentAt)],
     ["Primeiro contato", date(lead.firstContactAt)],
     ["Último contato", date(lead.lastContactAt)],
-    ["Próximo follow-up", date(lead.nextFollowUpAt)]
+    ["Último follow-up", date(lead.lastFollowUpAt)],
+    ["Próximo follow-up", date(lead.nextFollowUpAt)],
+    ["Sequência", followUpStepLabel(lead.followUpCount + 1, lead.followUpSequenceLength)],
+    ["Status da sequência", followUpSequenceStatusLabels[lead.followUpSequenceStatus]]
   ];
 
   return (
@@ -128,8 +134,11 @@ export default async function LeadDetailPage({ params }: { params: Promise<{ id:
         <div className="grid content-start gap-6">
           <Card className="p-5">
             <h2 className="font-semibold text-slate-950">Próxima ação recomendada</h2>
-            <p className="mt-3 text-sm text-slate-600">{lead.nextStepNote || "Defina um próximo follow-up com objetivo claro para evitar perda de timing."}</p>
+            <p className="mt-3 text-sm text-slate-600">{lead.nextAction || lead.nextStepNote || "Defina um próximo follow-up com objetivo claro para evitar perda de timing."}</p>
             <p className="mt-2 text-sm font-medium text-teal-700">{date(lead.nextFollowUpAt)}</p>
+            <div className="mt-4">
+              <DailyLeadActions leadId={lead.id} />
+            </div>
           </Card>
           <Card className="p-5">
             <h2 className="mb-4 font-semibold text-slate-950">Mensagem personalizada</h2>

@@ -1,5 +1,6 @@
 import { ContactEventType, PipelineStage } from "@prisma/client";
 import { NextResponse } from "next/server";
+import { canceledSequenceUpdate, isAdvancedPipelineStage, statusFromPipelineStage } from "@/lib/follow-up-sequence";
 import { pipelineStageLabels } from "@/lib/labels";
 import { prisma } from "@/lib/prisma";
 
@@ -18,7 +19,9 @@ export async function PATCH(request: Request, context: { params: Promise<{ id: s
     where: { id },
     data: {
       pipelineStage: body.pipelineStage,
+      status: statusFromPipelineStage(body.pipelineStage),
       lastContactAt: new Date(),
+      ...(isAdvancedPipelineStage(body.pipelineStage) ? canceledSequenceUpdate(pipelineStageLabels[body.pipelineStage]) : {}),
       histories:
         lead.pipelineStage === body.pipelineStage
           ? undefined

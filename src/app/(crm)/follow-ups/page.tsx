@@ -2,6 +2,7 @@ import { endOfDay, endOfWeek, startOfDay } from "date-fns";
 import { LeadStatus, Prisma } from "@prisma/client";
 import Link from "next/link";
 import { Badge, Card, PageHeader } from "@/components/ui";
+import { followUpStepLabel } from "@/lib/follow-up-sequence";
 import { date } from "@/lib/format";
 import { statusColors, statusLabels } from "@/lib/labels";
 import { prisma } from "@/lib/prisma";
@@ -47,9 +48,10 @@ export default async function FollowUpsPage() {
                   <div className="font-medium">{lead.companyName ?? lead.responsibleName}</div>
                   <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-slate-500">
                     <Badge className={statusColors[lead.status]}>{statusLabels[lead.status]}</Badge>
+                    <Badge>{followUpStepLabel(lead.followUpCount + 1, lead.followUpSequenceLength)}</Badge>
                     {date(lead.nextFollowUpAt)}
                   </div>
-                  {lead.nextStepNote ? <p className="mt-2 text-sm text-slate-600">{lead.nextStepNote}</p> : null}
+                  {lead.nextAction || lead.nextStepNote ? <p className="mt-2 text-sm text-slate-600">{lead.nextAction ?? lead.nextStepNote}</p> : null}
                 </Link>
               ))}
               {!leads.length ? <p className="text-sm text-slate-500">Nenhum lead nesta lista.</p> : null}

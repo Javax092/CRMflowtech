@@ -1,4 +1,4 @@
-import { ContactEventType, LeadSource, LeadStatus, OfferedService, PipelineStage, ScriptType, Segment } from "@prisma/client";
+import { ContactEventType, FollowUpSequenceStatus, LeadSource, LeadStatus, OfferedService, PipelineStage, ScriptType, Segment } from "@prisma/client";
 import { z } from "zod";
 
 const emptyToNull = z.preprocess((value) => (value === "" ? null : value), z.string().nullable().optional());
@@ -29,9 +29,15 @@ export const leadSchema = z
     pipelineStage: z.nativeEnum(PipelineStage).optional(),
     source: z.nativeEnum(LeadSource),
     notes: emptyToNull,
+    firstMessageSentAt: dateField,
     firstContactAt: dateField,
     lastContactAt: dateField,
     nextFollowUpAt: dateField,
+    followUpCount: z.preprocess((value) => Number(value || 0), z.number().int().min(0)).default(0),
+    followUpSequenceLength: z.preprocess((value) => Number(value || 3), z.number().int().min(2).max(3)).default(3),
+    followUpSequenceStatus: z.nativeEnum(FollowUpSequenceStatus).default(FollowUpSequenceStatus.CANCELED),
+    lastFollowUpAt: dateField,
+    nextAction: emptyToNull,
     followUpType: emptyToNull,
     nextStepNote: emptyToNull,
     forceDuplicate: z.preprocess((value) => value === "true" || value === true, z.boolean()).default(false)

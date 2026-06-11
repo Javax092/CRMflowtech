@@ -1,12 +1,12 @@
 "use client";
 
-import { LeadSource, LeadStatus, OfferedService, PipelineStage, Segment } from "@prisma/client";
+import { FollowUpSequenceStatus, LeadSource, LeadStatus, OfferedService, PipelineStage, Segment } from "@prisma/client";
 import Link from "next/link";
 import { useActionState, useState } from "react";
 import { createLeadAction, updateLeadAction } from "@/app/actions";
 import { Button, Card, Field, inputClass } from "@/components/ui";
 import { dateTimeInput } from "@/lib/format";
-import { pipelineStageLabels, segmentLabels, serviceLabels, sourceLabels, statusLabels } from "@/lib/labels";
+import { followUpSequenceStatusLabels, pipelineStageLabels, segmentLabels, serviceLabels, sourceLabels, statusLabels } from "@/lib/labels";
 
 type LeadFormProps = {
   lead?: {
@@ -27,9 +27,15 @@ type LeadFormProps = {
     pipelineStage?: PipelineStage | null;
     source: LeadSource;
     notes?: string | null;
+    firstMessageSentAt?: Date | string | null;
     firstContactAt?: Date | string | null;
     lastContactAt?: Date | string | null;
     nextFollowUpAt?: Date | string | null;
+    followUpCount?: number | null;
+    followUpSequenceLength?: number | null;
+    followUpSequenceStatus?: FollowUpSequenceStatus | null;
+    lastFollowUpAt?: Date | string | null;
+    nextAction?: string | null;
     followUpType?: string | null;
     nextStepNote?: string | null;
   };
@@ -126,14 +132,37 @@ export function LeadForm({ lead }: LeadFormProps) {
           <Field label="Primeiro contato">
             <input className={inputClass} name="firstContactAt" type="date" defaultValue={dateTimeInput(lead?.firstContactAt)} />
           </Field>
+          <Field label="Primeira mensagem enviada">
+            <input className={inputClass} name="firstMessageSentAt" type="date" defaultValue={dateTimeInput(lead?.firstMessageSentAt)} />
+          </Field>
           <Field label="Último contato">
             <input className={inputClass} name="lastContactAt" type="date" defaultValue={dateTimeInput(lead?.lastContactAt)} />
+          </Field>
+          <Field label="Último follow-up">
+            <input className={inputClass} name="lastFollowUpAt" type="date" defaultValue={dateTimeInput(lead?.lastFollowUpAt)} />
           </Field>
           <Field label="Próximo follow-up">
             <input className={inputClass} name="nextFollowUpAt" type="date" defaultValue={dateTimeInput(lead?.nextFollowUpAt)} />
           </Field>
+          <Field label="Follow-ups enviados">
+            <input className={inputClass} name="followUpCount" type="number" min="0" max="3" defaultValue={lead?.followUpCount ?? 0} />
+          </Field>
+          <Field label="Tamanho da sequência">
+            <select className={inputClass} name="followUpSequenceLength" defaultValue={lead?.followUpSequenceLength ?? 3}>
+              <option value="2">2 follow-ups</option>
+              <option value="3">3 follow-ups</option>
+            </select>
+          </Field>
+          <Field label="Status da sequência">
+            <select className={inputClass} name="followUpSequenceStatus" defaultValue={lead?.followUpSequenceStatus ?? FollowUpSequenceStatus.CANCELED}>
+              {Object.values(FollowUpSequenceStatus).map((value) => <option key={value} value={value}>{followUpSequenceStatusLabels[value]}</option>)}
+            </select>
+          </Field>
           <Field label="Tipo de follow-up">
             <input className={inputClass} name="followUpType" placeholder="WhatsApp, ligação, proposta..." defaultValue={lead?.followUpType ?? ""} />
+          </Field>
+          <Field label="Próxima ação">
+            <input className={inputClass} name="nextAction" defaultValue={lead?.nextAction ?? ""} />
           </Field>
           <div className="md:col-span-2">
             <Field label="Observação do próximo passo">

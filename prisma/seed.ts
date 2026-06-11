@@ -110,7 +110,17 @@ async function main() {
     {
       name: "Follow-up com demo",
       type: ScriptType.FOLLOW_UP_1,
-      content: "Oi, {{nome}}. Passando para saber se você conseguiu ver a demonstração da {{empresa}}: {{demo}}. Posso te explicar em 5 minutos como isso ajudaria na captação?"
+      content: "Olá! Tudo bem? Passando apenas para confirmar se você conseguiu visualizar a mensagem que enviei sobre algumas oportunidades que identifiquei para o seu negócio. Posso te mostrar rapidamente o que encontrei? 😊"
+    },
+    {
+      name: "Follow-up com oportunidade",
+      type: ScriptType.FOLLOW_UP_2,
+      content: "Olá! Continuei analisando a presença digital da empresa e encontrei alguns pontos interessantes que podem gerar mais clientes sem aumentar investimento em anúncios. Achei que valeria a pena compartilhar. Posso te mostrar?"
+    },
+    {
+      name: "Follow-up de encerramento",
+      type: ScriptType.FOLLOW_UP_3,
+      content: "Olá! Imagino que a rotina esteja corrida. Vou encerrar este contato para não incomodar. Mas caso tenha interesse em conhecer as oportunidades que identifiquei para aumentar as vendas e fortalecer a presença digital da empresa, fico à disposição. Sucesso para vocês! 🚀"
     },
     {
       name: "Proposta de mensalidade",

@@ -71,10 +71,18 @@ enum ContactEventType {
   DEMO_LINKED
 }
 
+enum FollowUpSequenceStatus {
+  ACTIVE
+  PAUSED
+  COMPLETED
+  CANCELED
+}
+
 enum ScriptType {
   FIRST_APPROACH
   FOLLOW_UP_1
   FOLLOW_UP_2
+  FOLLOW_UP_3
   WEBSITE_PROPOSAL
   SYSTEM_PROPOSAL
   MONTHLY_PROPOSAL
@@ -110,9 +118,15 @@ model Lead {
   pipelineStage         PipelineStage    @default(LEAD_ENCONTRADO)
   source                LeadSource       @default(MANUAL_LIST)
   notes                 String?
+  firstMessageSentAt    DateTime?
   firstContactAt        DateTime?
   lastContactAt         DateTime?
   nextFollowUpAt        DateTime?
+  followUpCount         Int              @default(0)
+  followUpSequenceLength Int             @default(3)
+  followUpSequenceStatus FollowUpSequenceStatus @default(CANCELED)
+  lastFollowUpAt        DateTime?
+  nextAction            String?
   followUpType          String?
   nextStepNote          String?
   recommendedProduct    String?
@@ -132,6 +146,7 @@ model Lead {
   @@index([pipelineStage])
   @@index([demoSiteId])
   @@index([nextFollowUpAt])
+  @@index([followUpSequenceStatus])
   @@index([companyNameNormalized])
 }
 
