@@ -61,6 +61,10 @@ enum LeadSource {
 enum ContactEventType {
   FIRST_CONTACT
   FOLLOW_UP
+  FOLLOW_UP_AUTOMATION_QUEUED
+  FOLLOW_UP_SENT_AUTOMATION
+  FOLLOW_UP_SEND_FAILED
+  FOLLOW_UP_SEQUENCE_COMPLETED
   MEETING_SCHEDULED
   PROPOSAL_SENT
   CLIENT_REPLIED
@@ -176,7 +180,14 @@ model ContactHistory {
   type      ContactEventType
   title     String
   message   String?
+  source    String?
+  provider  String?
+  messageId String?
+  sentAt    DateTime?
   createdAt DateTime         @default(now())
+
+  @@index([type])
+  @@index([sentAt])
 }
 
 model ScriptTemplate {

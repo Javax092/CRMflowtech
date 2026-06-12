@@ -4,9 +4,9 @@ import { FollowUpSequenceStatus, LeadStatus, PipelineStage } from "@prisma/clien
 export const followUpOffsets = [2, 5, 10] as const;
 export const defaultFollowUpSequenceLength = 3;
 export const followUpMessages = {
-  1: "Olá! Tudo bem? Passando apenas para confirmar se você conseguiu visualizar a mensagem que enviei sobre algumas oportunidades que identifiquei para o seu negócio. Posso te mostrar rapidamente o que encontrei? 😊",
-  2: "Olá! Continuei analisando a presença digital da empresa e encontrei alguns pontos interessantes que podem gerar mais clientes sem aumentar investimento em anúncios. Achei que valeria a pena compartilhar. Posso te mostrar?",
-  3: "Olá! Imagino que a rotina esteja corrida. Vou encerrar este contato para não incomodar. Mas caso tenha interesse em conhecer as oportunidades que identifiquei para aumentar as vendas e fortalecer a presença digital da empresa, fico à disposição. Sucesso para vocês! 🚀"
+  1: "Olá, tudo bem? 😊 Passando só para confirmar se você conseguiu ver a mensagem que enviei sobre algumas oportunidades que identifiquei para o seu negócio. Posso te mostrar rapidamente?",
+  2: "Olá! Passando novamente porque acredito que a ideia pode fazer sentido para vocês. Vi alguns pontos simples que podem ajudar a gerar mais clientes sem depender tanto de anúncio ou plataforma. Posso te mostrar em poucos minutos?",
+  3: "Olá! Imagino que a rotina esteja corrida. Vou encerrar esse contato para não incomodar, mas caso queira ver as oportunidades que identifiquei para fortalecer as vendas e a presença digital da empresa, fico à disposição. Sucesso para vocês! 🚀"
 } as const;
 
 export const advancedPipelineStages = new Set<PipelineStage>([

@@ -11,6 +11,11 @@ export function date(value?: Date | string | null) {
   return new Intl.DateTimeFormat("pt-BR", { dateStyle: "short" }).format(new Date(value));
 }
 
+export function dateTime(value?: Date | string | null) {
+  if (!value) return "-";
+  return new Intl.DateTimeFormat("pt-BR", { dateStyle: "short", timeStyle: "short" }).format(new Date(value));
+}
+
 export function dateTimeInput(value?: Date | string | null) {
   if (!value) return "";
   const dateValue = new Date(value);

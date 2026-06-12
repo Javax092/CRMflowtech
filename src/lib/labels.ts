@@ -61,6 +61,10 @@ export const sourceLabels: Record<LeadSource, string> = {
 export const eventLabels: Record<ContactEventType, string> = {
   FIRST_CONTACT: "Primeiro contato",
   FOLLOW_UP: "Follow-up",
+  FOLLOW_UP_AUTOMATION_QUEUED: "Follow-up enfileirado",
+  FOLLOW_UP_SENT_AUTOMATION: "Follow-up automático enviado",
+  FOLLOW_UP_SEND_FAILED: "Falha no follow-up automático",
+  FOLLOW_UP_SEQUENCE_COMPLETED: "Sequência de follow-up concluída",
   MEETING_SCHEDULED: "Reunião marcada",
   PROPOSAL_SENT: "Proposta enviada",
   CLIENT_REPLIED: "Cliente respondeu",
